@@ -11,6 +11,7 @@ from model import generate_model
 from mean import get_mean
 from classify import classify_video
 
+
 if __name__=="__main__":
     opt = parse_opts()
     opt.mean = get_mean()
@@ -28,10 +29,11 @@ if __name__=="__main__":
     if opt.verbose:
         print(model)
 
-    input_files = []
-    with open(opt.input, 'r') as f:
-        for row in f:
-            input_files.append(row[:-1])
+#     input_files = []
+#     with open(opt.input, 'r') as f:
+#         for row in f:
+#             input_files.append(row[:-1])
+    input_files = os.listdir(opt.video_root)
 
     class_names = []
     with open('class_names_list') as f:
