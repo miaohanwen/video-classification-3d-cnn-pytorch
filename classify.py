@@ -4,6 +4,8 @@ from torch.autograd import Variable
 from dataset import Video
 from spatial_transforms import (Compose, Normalize, Scale, CenterCrop, ToTensor)
 from temporal_transforms import LoopPadding
+import torch.nn.functional as F
+
 
 def classify_video(video_dir, video_name, class_names, model, opt):
     assert opt.mode in ['score', 'feature']
@@ -24,7 +26,7 @@ def classify_video(video_dir, video_name, class_names, model, opt):
     for i, (inputs, segments) in enumerate(data_loader):
         inputs = Variable(inputs, volatile=True)
         outputs = model(inputs)
-
+        outputs = F.softmax(outputs, dim=1)
         video_outputs.append(outputs.cpu().data)
         video_segments.append(segments)
 
@@ -43,7 +45,7 @@ def classify_video(video_dir, video_name, class_names, model, opt):
 
         if opt.mode == 'score':
             clip_results['label'] = class_names[max_indices[i]]
-            clip_results['scores'] = video_outputs[i].tolist()
+            clip_results['scores'] = video_outputs[i, max_indices[i]].item()
         elif opt.mode == 'feature':
             clip_results['features'] = video_outputs[i].tolist()
 
