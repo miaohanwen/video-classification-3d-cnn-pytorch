@@ -7,6 +7,21 @@ from temporal_transforms import LoopPadding
 import torch.nn.functional as F
 
 
+def get_video_results(outputs, class_names, output_topk):
+    sorted_scores, locs = torch.topk(outputs,
+                                     k=min(output_topk, len(class_names)))
+
+    video_results = []
+    for i in range(sorted_scores.size(0)):
+        video_results.append({
+            'label': class_names[locs[i].item()],
+            'score': sorted_scores[i].item()
+        })
+    return video_results
+#     predicted_labels = [class_names[locs[i].item()] for i in range(sorted_scores.size(0))]
+#     return video_results, predicted_labels
+
+
 def classify_video(video_dir, video_name, class_names, model, opt):
     assert opt.mode in ['score', 'feature']
 
@@ -30,25 +45,45 @@ def classify_video(video_dir, video_name, class_names, model, opt):
         video_outputs.append(outputs.cpu().data)
         video_segments.append(segments)
 
-    video_outputs = torch.cat(video_outputs)
+    video_outputs = torch.cat(video_outputs)  
+    
     video_segments = torch.cat(video_segments)
+    
     results = {
         'video': video_name,
         'clips': []
     }
-
-    _, max_indices = video_outputs.max(dim=1)
+    
     for i in range(video_outputs.size(0)):
         clip_results = {
             'segment': video_segments[i].tolist(),
         }
-
-        if opt.mode == 'score':
-            clip_results['label'] = class_names[max_indices[i]]
-            clip_results['scores'] = video_outputs[i, max_indices[i]].item()
-        elif opt.mode == 'feature':
-            clip_results['features'] = video_outputs[i].tolist()
-
+        label = get_video_results(video_outputs[i], class_names, 5)
+        clip_results['label'] = label
         results['clips'].append(clip_results)
+        
 
+#     _, max_indices = video_outputs.max(dim=1)
+#     for i in range(video_outputs.size(0)):
+#         clip_results = {
+#             'segment': video_segments[i].tolist(),
+#         }
+
+#         if opt.mode == 'score':
+#             clip_results['label'] = class_names[max_indices[i]]
+#             clip_results['scores'] = video_outputs[i, max_indices[i]].item()
+#         elif opt.mode == 'feature':
+#             clip_results['features'] = video_outputs[i].tolist()
+
+#         results['clips'].append(clip_results)
+
+#     average_scores = torch.mean(video_outputs, dim=0)
+#     video_results, predicted_labels = get_video_results(average_scores, class_names, 1)
+
+#     video_results = get_video_results(average_scores, class_names, 5)
+#     results = {
+#         'video': video_name,
+#         'result': video_results,
+# #         'predicted_labels': predicted_labels
+#     }
     return results
